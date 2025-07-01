@@ -1,8 +1,12 @@
 const express = require("express");
-const app = express();
-require("dotenv").config();
+const dotenv = require("dotenv");
+const routes = require("./routes");
 
+dotenv.config();
+
+const app = express();
 app.use(express.json());
-app.use("/api/auth", require("./routes/auth.route"));
+
+app.use("/api", routes);
 
 module.exports = app;
