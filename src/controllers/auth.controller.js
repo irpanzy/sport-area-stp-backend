@@ -3,22 +3,9 @@ import jwt from "jsonwebtoken";
 import prisma from "../prisma/client.js";
 
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: "Semua field wajib diisi" });
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: "Format email tidak valid" });
-  }
-
-  if (password.length < 6) {
-    return res.status(400).json({ message: "Password minimal 6 karakter" });
-  }
-
   try {
+    const { name, email, password } = req.validatedRegister;
+
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: "Email sudah terdaftar" });
@@ -35,7 +22,7 @@ export const register = async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "Registrasi berhasil" });
+    res.status(201).json({ message: "Akun anda berhasil dibuat" });
   } catch (err) {
     res.status(500).json({ message: "Terjadi kesalahan", error: err.message });
   }
@@ -43,7 +30,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.validatedLogin;
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {

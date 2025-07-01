@@ -27,3 +27,64 @@ export const adminMiddleware = (req, res, next) => {
   }
   next();
 };
+
+export const validateRegisterUser = (req, res, next) => {
+  const { name, email, password } = req.body;
+
+  if (typeof name !== "string" || name.trim() === "") {
+    return res.status(400).json({ message: "Nama tidak boleh kosong" });
+  }
+
+  if (typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ message: "Email tidak boleh kosong" });
+  }
+
+  if (typeof password !== "string" || password.trim() === "") {
+    return res.status(400).json({ message: "Password tidak boleh kosong" });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Format email tidak valid" });
+  }
+
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ message: "Password minimal 6 karakter" });
+  }
+
+  req.validatedRegister = {
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    password,
+  };
+
+  next();
+};
+
+export const validateLoginUser = (req, res, next) => {
+  const { email, password } = req.body;
+
+  if (typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ message: "Email tidak boleh kosong" });
+  }
+
+  if (typeof password !== "string" || password.trim() === "") {
+    return res.status(400).json({ message: "Password tidak boleh kosong" });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Format email tidak valid" });
+  }
+
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ message: "Password minimal 6 karakter" });
+  }
+
+  req.validatedLogin = {
+    email: email.trim().toLowerCase(),
+    password,
+  };
+
+  next();
+};

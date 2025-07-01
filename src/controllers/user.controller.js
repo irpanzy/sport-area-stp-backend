@@ -1,39 +1,5 @@
 import prisma from "../prisma/client.js";
-
-export const getUserById = async (req, res) => {
-  try {
-    const userId = parseInt(req.params.id);
-    if (isNaN(userId)) {
-      return res.status(400).json({ message: "ID tidak valid" });
-    }
-
-    const isSelf = req.user.id === userId;
-    const isAdmin = req.user.role === "admin";
-
-    if (!isSelf && !isAdmin) {
-      return res.status(403).json({
-        message:
-          "Akses ditolak: hanya pemilik akun atau admin yang dapat mengakses data ini",
-      });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, name: true, email: true, role: true },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "User tidak ditemukan" });
-    }
-
-    res.json({ user });
-  } catch (err) {
-    res.status(500).json({
-      message: "Terjadi kesalahan",
-      error: err.message,
-    });
-  }
-};
+import bcrypt from "bcrypt";
 
 export const getAllUsers = async (req, res) => {
   try {
@@ -48,6 +14,66 @@ export const getAllUsers = async (req, res) => {
     });
 
     res.json({ users });
+  } catch (err) {
+    res.status(500).json({
+      message: "Terjadi kesalahan",
+      error: err.message,
+    });
+  }
+};
+
+export const getUserById = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { id: true, name: true, email: true, role: true },
+    });
+
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({
+      message: "Terjadi kesalahan",
+      error: err.message,
+    });
+  }
+};
+
+export const updateUserById = async (req, res) => {
+  try {
+    const data = { ...req.updateData };
+
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.userId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        updated_at: true,
+      },
+    });
+
+    res.json({
+      message: "User berhasil diperbarui",
+      user: updatedUser,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Terjadi kesalahan",
+      error: err.message,
+    });
+  }
+};
+
+export const deleteUserById = async (req, res) => {
+  try {
+    await prisma.user.delete({ where: { id: req.userId } });
+    res.json({ message: "User berhasil dihapus" });
   } catch (err) {
     res.status(500).json({
       message: "Terjadi kesalahan",
