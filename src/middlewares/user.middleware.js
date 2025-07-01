@@ -1,6 +1,45 @@
 import prisma from "../prisma/client.js";
 
-export const validateUserUpdate = async (req, res, next) => {
+export const validateGetAllUsers = async (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res
+      .status(403)
+      .json({ message: "Hanya admin yang dapat melihat semua user" });
+  }
+  next();
+};
+
+export const validateGetUserById = async (req, res, next) => {
+  const userId = parseInt(req.params.id);
+
+  if (isNaN(userId)) {
+    return res.status(400).json({ message: "ID tidak valid" });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User tidak ditemukan" });
+    }
+
+    const isSelf = req.user.id === userId;
+    const isAdmin = req.user.role === "admin";
+
+    if (!isSelf && !isAdmin) {
+      return res.status(403).json({
+        message:
+          "Akses ditolak: hanya pemilik akun atau admin yang dapat mengakses data ini",
+      });
+    }
+
+    req.userId = userId;
+    next();
+  } catch (err) {
+    res.status(500).json({ message: "Validasi gagal", error: err.message });
+  }
+};
+
+export const validateUpdateUser = async (req, res, next) => {
   const { name, email, password, role } = req.body;
   const userId = parseInt(req.params.id);
 
@@ -66,7 +105,7 @@ export const validateUserUpdate = async (req, res, next) => {
   }
 };
 
-export const validateUserDelete = async (req, res, next) => {
+export const validateDeleteUser = async (req, res, next) => {
   const userId = parseInt(req.params.id);
 
   if (isNaN(userId)) {
@@ -86,43 +125,4 @@ export const validateUserDelete = async (req, res, next) => {
   } catch (err) {
     res.status(500).json({ message: "Validasi gagal", error: err.message });
   }
-};
-
-export const validateGetUserById = async (req, res, next) => {
-  const userId = parseInt(req.params.id);
-
-  if (isNaN(userId)) {
-    return res.status(400).json({ message: "ID tidak valid" });
-  }
-
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ message: "User tidak ditemukan" });
-    }
-
-    const isSelf = req.user.id === userId;
-    const isAdmin = req.user.role === "admin";
-
-    if (!isSelf && !isAdmin) {
-      return res.status(403).json({
-        message:
-          "Akses ditolak: hanya pemilik akun atau admin yang dapat mengakses data ini",
-      });
-    }
-
-    req.userId = userId;
-    next();
-  } catch (err) {
-    res.status(500).json({ message: "Validasi gagal", error: err.message });
-  }
-};
-
-export const validateGetAllUsers = async (req, res, next) => {
-  if (req.user.role !== "admin") {
-    return res
-      .status(403)
-      .json({ message: "Hanya admin yang dapat melihat semua user" });
-  }
-  next();
 };

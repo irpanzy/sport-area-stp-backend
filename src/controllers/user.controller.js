@@ -38,7 +38,7 @@ export const getUserById = async (req, res) => {
   }
 };
 
-export const updateUserById = async (req, res) => {
+export const updateUser = async (req, res) => {
   try {
     const data = { ...req.updateData };
 
@@ -70,7 +70,7 @@ export const updateUserById = async (req, res) => {
   }
 };
 
-export const deleteUserById = async (req, res) => {
+export const deleteUser = async (req, res) => {
   try {
     await prisma.user.delete({ where: { id: req.userId } });
     res.json({ message: "User berhasil dihapus" });
