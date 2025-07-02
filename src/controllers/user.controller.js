@@ -4,12 +4,16 @@ import bcrypt from "bcrypt";
 export const getAllUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
+      orderBy: {
+        id: "asc",
+      },
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         created_at: true,
+        updated_at: true,
       },
     });
 
