@@ -29,11 +29,50 @@ export const adminMiddleware = (req, res, next) => {
 };
 
 export const validateRegisterUser = (req, res, next) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, phone } = req.body;
 
   if (typeof name !== "string" || name.trim() === "") {
     return res.status(400).json({ message: "Nama tidak boleh kosong" });
   }
+
+  if (typeof email !== "string" || email.trim() === "") {
+    return res.status(400).json({ message: "Email tidak boleh kosong" });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ message: "Format email tidak valid" });
+  }
+
+  if (typeof password !== "string" || password.trim() === "") {
+    return res.status(400).json({ message: "Password tidak boleh kosong" });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ message: "Password minimal 6 karakter" });
+  }
+
+  if (typeof phone !== "string" || phone.trim() === "") {
+    return res.status(400).json({ message: "Nomor HP tidak boleh kosong" });
+  }
+
+  const phoneRegex = /^[0-9]{10,14}$/;
+  if (!phoneRegex.test(phone)) {
+    return res.status(400).json({ message: "Format nomor HP tidak valid" });
+  }
+
+  req.validatedRegister = {
+    name: name.trim(),
+    email: email.trim().toLowerCase(),
+    password,
+    phone: phone.trim(),
+  };
+
+  next();
+};
+
+export const validateLoginUser = (req, res, next) => {
+  const { email, password } = req.body;
 
   if (typeof email !== "string" || email.trim() === "") {
     return res.status(400).json({ message: "Email tidak boleh kosong" });
@@ -52,39 +91,10 @@ export const validateRegisterUser = (req, res, next) => {
     return res.status(400).json({ message: "Password minimal 6 karakter" });
   }
 
-  req.validatedRegister = {
-    name: name.trim(),
+  req.validatedLogin = {
     email: email.trim().toLowerCase(),
     password,
   };
 
   next();
 };
-
-  export const validateLoginUser = (req, res, next) => {
-    const { email, password } = req.body;
-
-    if (typeof email !== "string" || email.trim() === "") {
-      return res.status(400).json({ message: "Email tidak boleh kosong" });
-    }
-
-    if (typeof password !== "string" || password.trim() === "") {
-      return res.status(400).json({ message: "Password tidak boleh kosong" });
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Format email tidak valid" });
-    }
-
-    if (typeof password !== "string" || password.length < 6) {
-      return res.status(400).json({ message: "Password minimal 6 karakter" });
-    }
-
-    req.validatedLogin = {
-      email: email.trim().toLowerCase(),
-      password,
-    };
-
-    next();
-  };

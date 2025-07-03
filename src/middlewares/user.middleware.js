@@ -40,7 +40,7 @@ export const validateGetUserById = async (req, res, next) => {
 };
 
 export const validateUpdateUser = async (req, res, next) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password, role, phone } = req.body;
   const userId = parseInt(req.params.id);
 
   if (isNaN(userId)) {
@@ -48,6 +48,7 @@ export const validateUpdateUser = async (req, res, next) => {
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^[0-9]{10,14}$/;
 
   try {
     const existingUser = await prisma.user.findUnique({
@@ -79,6 +80,23 @@ export const validateUpdateUser = async (req, res, next) => {
       }
 
       updateData.email = email;
+    }
+
+    if (phone !== undefined) {
+      if (!phoneRegex.test(phone)) {
+        return res
+          .status(400)
+          .json({ message: "Format nomor HP tidak valid (10–14 digit angka)" });
+      }
+
+      const phoneUsed = await prisma.user.findUnique({ where: { phone } });
+      if (phoneUsed && phoneUsed.id !== userId) {
+        return res
+          .status(400)
+          .json({ message: "Nomor HP sudah digunakan user lain" });
+      }
+
+      updateData.phone = phone.trim();
     }
 
     if (password !== undefined) {

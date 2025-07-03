@@ -4,11 +4,16 @@ import prisma from "../prisma/client.js";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.validatedRegister;
+    const { name, email, password, phone } = req.validatedRegister;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ message: "Email sudah terdaftar" });
+    }
+
+    const existingPhone = await prisma.user.findUnique({ where: { phone } });
+    if (existingPhone) {
+      return res.status(400).json({ message: "Nomor HP sudah terdaftar" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -18,6 +23,7 @@ export const register = async (req, res) => {
         name,
         email,
         password: hashedPassword,
+        phone,
         role: "user",
       },
     });
@@ -50,7 +56,13 @@ export const login = async (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: "Terjadi kesalahan", error: err.message });
