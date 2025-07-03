@@ -1,6 +1,5 @@
 const express = require("express");
 const {
-  generateReport,
   downloadReport,
   getAllReports,
   getReportById,
