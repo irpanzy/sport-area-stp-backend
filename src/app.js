@@ -2,7 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const routes = require("./routes");
 const cors = require("cors");
-const path = require("path"); // Tambahkan ini
+const path = require("path");
 
 dotenv.config();
 
@@ -16,11 +16,9 @@ app.use(
   })
 );
 
-// 🔽 Arahkan ke folder `uploads` di luar `src/`
 const uploadsPath = path.join(__dirname, "..", "uploads");
 app.use("/uploads", express.static(uploadsPath));
 
-// 🔽 Routing utama
 app.use("/api", routes);
 
 module.exports = app;

@@ -13,7 +13,7 @@ export const register = async (req, res) => {
 
     const existingPhone = await prisma.user.findUnique({ where: { phone } });
     if (existingPhone) {
-      return res.status(400).json({ message: "Nomor HP sudah terdaftar" });
+      return res.status(400).json({ message: "Nomor Handphone sudah terdaftar" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

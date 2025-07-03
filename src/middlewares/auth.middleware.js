@@ -53,12 +53,12 @@ export const validateRegisterUser = (req, res, next) => {
   }
 
   if (typeof phone !== "string" || phone.trim() === "") {
-    return res.status(400).json({ message: "Nomor HP tidak boleh kosong" });
+    return res.status(400).json({ message: "Nomor Handphone tidak boleh kosong" });
   }
 
   const phoneRegex = /^[0-9]{10,14}$/;
   if (!phoneRegex.test(phone)) {
-    return res.status(400).json({ message: "Format nomor HP tidak valid" });
+    return res.status(400).json({ message: "Format nomor Handphone tidak valid" });
   }
 
   req.validatedRegister = {

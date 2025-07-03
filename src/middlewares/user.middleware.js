@@ -86,14 +86,14 @@ export const validateUpdateUser = async (req, res, next) => {
       if (!phoneRegex.test(phone)) {
         return res
           .status(400)
-          .json({ message: "Format nomor HP tidak valid (10–14 digit angka)" });
+          .json({ message: "Format nomor Handphone tidak valid (10–14 digit angka)" });
       }
 
       const phoneUsed = await prisma.user.findUnique({ where: { phone } });
       if (phoneUsed && phoneUsed.id !== userId) {
         return res
           .status(400)
-          .json({ message: "Nomor HP sudah digunakan user lain" });
+          .json({ message: "Nomor Handphone sudah digunakan user lain" });
       }
 
       updateData.phone = phone.trim();
