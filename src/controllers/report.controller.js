@@ -1,102 +1,109 @@
 import prisma from "../prisma/client.js";
 import fs from "fs";
 import path from "path";
+import puppeteer from "puppeteer";
 
-// Fungsi helper untuk generate PDF content (simplified)
-const generatePDFContent = (booking) => {
-  return `
-LAPORAN BOOKING LAPANGAN OLAHRAGA
-=====================================
-
-ID Booking: ${booking.id}
-Nama Pemesan: ${booking.user.name}
-Email: ${booking.user.email}
-Jenis Lapangan: ${booking.field_type.toUpperCase()}
-Tanggal: ${new Date(booking.date).toLocaleDateString("id-ID")}
-Waktu: ${booking.time_slot}
-Status: ${booking.status.toUpperCase()}
-Tanggal Booking: ${new Date(booking.created_at).toLocaleDateString("id-ID")}
-
-${booking.admin ? `Disetujui oleh: ${booking.admin.name}` : ""}
-
-Catatan:
-- Laporan ini dibuat secara otomatis
-- Harap bawa laporan ini saat menggunakan lapangan
-- Untuk pertanyaan hubungi admin
-
-Dibuat pada: ${new Date().toLocaleString("id-ID")}
-  `;
+const compileTemplate = (html, data) => {
+  return html.replace(/{{(.*?)}}/g, (_, key) => data[key.trim()] || "");
 };
 
-export const generateReport = async (req, res) => {
+export const generatePDFwithPuppeteer = async (req, res) => {
   try {
+    const bookingId = parseInt(req.params.bookingId);
+
     const booking = await prisma.booking.findUnique({
-      where: { id: req.bookingId },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-        admin: {
-          select: { id: true, name: true },
-        },
-      },
+      where: { id: bookingId },
+      include: { user: true, admin: true },
     });
 
-    if (booking.status !== "approved") {
-      return res.status(400).json({
-        message:
-          "Laporan hanya dapat dibuat untuk booking yang sudah disetujui",
-      });
+    if (!booking || booking.status !== "approved") {
+      return res
+        .status(400)
+        .json({ message: "Booking tidak valid atau belum disetujui" });
     }
 
-    // Cek apakah report sudah ada
     const existingReport = await prisma.report.findUnique({
-      where: { booking_id: req.bookingId },
+      where: { booking_id: bookingId },
     });
 
     if (existingReport) {
-      return res.status(400).json({
-        message: "Laporan untuk booking ini sudah pernah dibuat",
-      });
+      return res
+        .status(400)
+        .json({ message: "Laporan untuk booking ini sudah pernah dibuat" });
     }
 
-    // Generate filename
-    const fileName = `booking-report-${booking.id}-${Date.now()}.txt`;
-    const uploadDir = path.join(process.cwd(), "uploads", "reports");
+    // Load HTML template
+    const templatePath = path.join(
+      process.cwd(),
+      "views",
+      "report-template.html"
+    );
 
-    // Pastikan direktori ada
+    if (!fs.existsSync(templatePath)) {
+      return res.status(500).json({ message: "Template HTML tidak ditemukan" });
+    }
+
+    const html = fs.readFileSync(templatePath, "utf8");
+
+    const data = {
+      tanggalCetak: new Date().toLocaleDateString("id-ID"),
+      bookingId: booking.id,
+      nama: booking.user.name,
+      phone: booking.user.phone || "-",
+      lapangan:
+        booking.field_type === "basket" ? "Lapangan Basket" : "Lapangan Futsal",
+      lapanganId: booking.field_type === "basket" ? "LAP-B" : "LAP-F",
+      disetujuiOleh: booking.admin.name,
+      tanggalBooking: new Date(booking.date).toLocaleDateString("id-ID", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+      jam: booking.time_slot,
+    };
+
+    const compiledHTML = compileTemplate(html, data);
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+
+    // ✅ Tambahkan waitUntil: 'networkidle0' agar gambar sempat termuat
+    await page.setContent(compiledHTML, { waitUntil: "networkidle0" });
+
+    const uploadDir = path.join(process.cwd(), "uploads", "reports");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
+    const fileName = `LAP-${booking.field_type.toUpperCase()}-${
+      booking.id
+    }-${new Date().getTime()}.pdf`;
     const filePath = path.join(uploadDir, fileName);
     const relativePath = path.join("uploads", "reports", fileName);
 
-    // Generate content dan simpan file
-    const pdfContent = generatePDFContent(booking);
-    fs.writeFileSync(filePath, pdfContent);
+    await page.pdf({
+      path: filePath,
+      width: "10.67in",
+      height: "6.25in",
+      printBackground: true,
+    });
+    await browser.close();
 
     // Simpan ke database
-    const report = await prisma.report.create({
+    await prisma.report.create({
       data: {
-        booking_id: req.bookingId,
+        booking_id: bookingId,
         file_name: fileName,
         file_path: relativePath,
       },
     });
 
-    res.status(201).json({
-      message: "Laporan berhasil dibuat",
-      report: {
-        id: report.id,
-        booking_id: report.booking_id,
-        file_name: report.file_name,
-        generated_at: report.generated_at,
-      },
-    });
+    res.download(filePath, fileName);
   } catch (err) {
+    console.error("Gagal generate PDF:", err.message);
     res.status(500).json({
-      message: "Terjadi kesalahan",
+      message: "Gagal generate laporan PDF",
       error: err.message,
     });
   }
@@ -110,7 +117,7 @@ export const downloadReport = async (req, res) => {
         booking: {
           include: {
             user: {
-              select: { id: true, name: true, email: true },
+              select: { id: true, name: true, email: true, phone: true },
             },
           },
         },
@@ -131,7 +138,7 @@ export const downloadReport = async (req, res) => {
       "Content-Disposition",
       `attachment; filename="${report.file_name}"`
     );
-    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Content-Type", "application/pdf");
 
     // Stream file
     const fileStream = fs.createReadStream(filePath);
@@ -160,10 +167,10 @@ export const getAllReports = async (req, res) => {
         booking: {
           include: {
             user: {
-              select: { id: true, name: true, email: true },
+              select: { id: true, name: true, email: true, phone: true },
             },
             admin: {
-              select: { id: true, name: true },
+              select: { id: true, name: true, email: true, phone: true },
             },
           },
         },
@@ -187,10 +194,10 @@ export const getReportById = async (req, res) => {
         booking: {
           include: {
             user: {
-              select: { id: true, name: true, email: true },
+              select: { id: true, name: true, email: true, phone: true },
             },
             admin: {
-              select: { id: true, name: true },
+              select: { id: true, name: true, email: true, phone: true },
             },
           },
         },
