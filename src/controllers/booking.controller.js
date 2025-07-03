@@ -5,11 +5,31 @@ export const createBooking = async (req, res) => {
     const { field_type, date, time_slot } = req.validatedBooking;
     const user_id = req.user.id;
 
-    // Cek apakah sudah ada booking di waktu yang sama
+    const inputDate = new Date(date);
+    inputDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (inputDate < today) {
+      return res.status(400).json({
+        message: "Tidak bisa booking untuk tanggal yang sudah lewat",
+      });
+    }
+
+    // 🔽 Validasi hari Sabtu (6) dan Minggu (0)
+    const day = inputDate.getDay();
+    if (day === 0 || day === 6) {
+      return res.status(400).json({
+        message: "Booking tidak tersedia pada hari Sabtu dan Minggu",
+      });
+    }
+
+    // 🔽 Cek tabrakan booking
     const existingBooking = await prisma.booking.findFirst({
       where: {
         field_type,
-        date: new Date(date),
+        date: inputDate,
         time_slot,
         status: {
           in: ["pending", "approved"],
@@ -23,17 +43,18 @@ export const createBooking = async (req, res) => {
       });
     }
 
+    // 🔽 Simpan booking baru
     const booking = await prisma.booking.create({
       data: {
         user_id,
         field_type,
-        date: new Date(date),
+        date: inputDate,
         time_slot,
         status: "pending",
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
@@ -71,13 +92,13 @@ export const getAllBookings = async (req, res) => {
 
     const bookings = await prisma.booking.findMany({
       where,
-      orderBy: [{ date: "asc" }, { time_slot: "asc" }],
+      orderBy: [{ date: "asc" }, { time_slot: "asc" }, { id: "asc" }],
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         admin: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
@@ -97,10 +118,10 @@ export const getBookingById = async (req, res) => {
       where: { id: req.bookingId },
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         admin: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
@@ -129,10 +150,10 @@ export const getUserBookings = async (req, res) => {
       orderBy: [{ date: "asc" }, { created_at: "asc" }],
       include: {
         admin: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
@@ -159,10 +180,10 @@ export const updateBookingStatus = async (req, res) => {
       },
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         admin: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
@@ -194,10 +215,10 @@ export const updateBooking = async (req, res) => {
       data: updateData,
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
         admin: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, email: true, phone: true },
         },
       },
     });
