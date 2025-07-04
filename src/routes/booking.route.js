@@ -25,7 +25,7 @@ router.get("/my-bookings", authMiddleware, getUserBookings);
 router.get("/:id", authMiddleware, validateGetBookingById, getBookingById);
 router.put("/:id", authMiddleware, validateUpdateBooking, updateBooking);
 
-router.get("/", authMiddleware, validateAdminAccess, getAllBookings);
+router.get("/", authMiddleware, getAllBookings);
 router.patch(
   "/:id/status",
   authMiddleware,
