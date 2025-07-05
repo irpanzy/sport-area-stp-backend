@@ -30,16 +30,39 @@ export const adminMiddleware = (req, res, next) => {
 
 export const validateRegisterUser = (req, res, next) => {
   const { name, email, password, phone } = req.body;
+  const phoneRegex = /^[0-9]{10,14}$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   if (typeof name !== "string" || name.trim() === "") {
     return res.status(400).json({ message: "Nama tidak boleh kosong" });
+  }
+
+  if (name.length < 4) {
+    return res.status(400).json({ message: "Nama minimal 4 karakter" });
+  }
+
+  if (typeof phone !== "string" || phone.trim() === "") {
+    return res
+      .status(400)
+      .json({ message: "Nomor Handphone tidak boleh kosong" });
+  }
+
+  if (phone.length < 10) {
+    return res
+      .status(400)
+      .json({ message: "Nomor Handphone minimal 10 karakter" });
+  }
+
+  if (!phoneRegex.test(phone)) {
+    return res
+      .status(400)
+      .json({ message: "Format nomor Handphone tidak valid" });
   }
 
   if (typeof email !== "string" || email.trim() === "") {
     return res.status(400).json({ message: "Email tidak boleh kosong" });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ message: "Format email tidak valid" });
   }
@@ -50,15 +73,6 @@ export const validateRegisterUser = (req, res, next) => {
 
   if (password.length < 6) {
     return res.status(400).json({ message: "Password minimal 6 karakter" });
-  }
-
-  if (typeof phone !== "string" || phone.trim() === "") {
-    return res.status(400).json({ message: "Nomor Handphone tidak boleh kosong" });
-  }
-
-  const phoneRegex = /^[0-9]{10,14}$/;
-  if (!phoneRegex.test(phone)) {
-    return res.status(400).json({ message: "Format nomor Handphone tidak valid" });
   }
 
   req.validatedRegister = {
